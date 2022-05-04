@@ -37,13 +37,23 @@ def gen_eucl_dist(x, A):
     final_dist = np.sqrt(vector_sums) # Square root each value in the vector
     return final_dist
 
-def classify_nn(training_filename, testing_filename, k):
+def classify_nn(training_filename, testing_filename, k, overide_data=False):
     col_names = ['num_preg','gluc_conc','bld_prs','skn_thck','insulin','bmi','dia_ped_f','age','class']
     nn_classific_cls = []
     
-    train_df, solutions = get_file_data(training_filename, False)
-    test_df, s = get_file_data(testing_filename, True)
+    # Taking data from a file, or provided for 10-fold 
+    if overide_data == False:
+        train_df, solutions = get_file_data(training_filename, False)
+        test_df, s = get_file_data(testing_filename, True)
+    else:
+        train_df = training_filename[0]
+        solutions = training_filename[1]
+        test_df = testing_filename
     
+    # print(train_df[:5])
+    # print(solutions[:5])
+    # print(test_df[:5])
+    # exit()
     train_matrix = np.array(train_df)
     test_matrix = np.array(test_df)
    
@@ -68,27 +78,33 @@ def classify_nn(training_filename, testing_filename, k):
     
     return nn_classific_cls
 
-def classify_nb(training_filename, testing_filename):
+def classify_nb(training_filename, testing_filename, overide_data=False):
+    # P(E|Yes) = P(E_1|yes) + ... + P(E_n|yes)
+    # P(yes|E) = ( P(E|yes)P(yes) ) / P(E)
+    # (1/var sqrt(2 pi) ) * e ^ ( - (x - mean)^2 / 2 * (var^2))
     
     col_names = ['num_preg','gluc_conc','bld_prs','skn_thck','insulin','bmi','dia_ped_f','age','class']
     nn_classific_cls = []
     
-    train_df, solutions = get_file_data(training_filename, False)
-    test_df, s = get_file_data(testing_filename, True)
+    if overide_data == False:
+        train_df, solutions = get_file_data(training_filename, False)
+        test_df, s = get_file_data(testing_filename, True)
+    else:
+        train_df = training_filename[0]
+        solutions = training_filename[1]
+        test_df = testing_filename
     
     train_matrix = np.array(train_df)
     test_matrix = np.array(test_df)
     
     solutions = np.array(solutions)
     sol_mtx = np.where(solutions == 'yes', 1, 0)
-    mean_std_arr = gen_mean_var_per_x(train_matrix, solutions)
+    mean_std_arr = gen_mean_std_per_x(train_matrix, solutions)
         
-    # P(E|Yes) = P(E_1|yes) + ...
 
-    # P(yes|E) = P(E|yes)P(yes)/P(E)
     classifications = []
     P_yes = sum(sol_mtx)/len(sol_mtx)
-    P_no = (len(sol_mtx)-P_yes)/len(sol_mtx)
+    P_no = 1-P_yes
     
     for test in test_matrix:
         P_x_yes = prob_dens_func(test, mean_std_arr, 0)
@@ -101,14 +117,20 @@ def classify_nb(training_filename, testing_filename):
         else:
             classifications.append('no')
         
-
-    # prob_dens_func(mean, var, )
-    # (1/var sqrt(2 pi) ) * e ^ ( - (x - mean)^2 / 2 * var^2)
-    
-    
     return classifications
 
-def gen_mean_var_per_x(train_matrix, solutions):
+def prob_dens_func(x, mean_std, yes_no):
+    tot_P = 1
+    for i, x_var in enumerate(x):
+        # Calculate probability density
+        mean = mean_std[i][yes_no][0]
+        std = mean_std[i][yes_no][1]
+        expon = - ((x_var - mean) ** 2) / (2 * (std**2))
+        result = (1 / ( std * math.sqrt(2 * math.pi))) * (math.e ** expon)
+        tot_P = tot_P * result
+    return tot_P
+
+def gen_mean_std_per_x(train_matrix, solutions):
     sol_mask_yes = np.where(solutions == 'yes', 0, 1) # 0 for keep, 1 for remove (for some reason??) (for yes's)
     sol_mask_no = np.where(solutions == 'yes', 1, 0) # 1 for keep, 0 for remove (for no's)
     
@@ -131,25 +153,13 @@ def gen_mean_var_per_x(train_matrix, solutions):
     
     return mean_std_arr
 
-def prob_dens_func(x, mean_std, yes_no):
-    tot_P = 1
-    for i, x_var in enumerate(x):
-        # Calculate probability density
-        mean = mean_std[i][yes_no][0]
-        var = mean_std[i][yes_no][1]
-        expon = -((x_var - mean) ** 2) / (2 * var**2)
-        result = (1 / ( var * math.sqrt(2 * math.pi))) * (math.e ** expon)
-        tot_P = tot_P * result
-    return tot_P
-        
-    
-
 def get_resutls(filename):
     with open(filename, 'r') as f:
         return f.read().splitlines()
 
 def main():
     
+    classif = classify_nn("train.data", "test.data", 5)
     classif = classify_nb("train.data", "test.data")
     print(len(classif))
     test_results = get_resutls("test.results")
@@ -175,5 +185,6 @@ def main():
     print(f'{"False":<8}{fa_neg:<8.2f}{tr_neg:<8.2f}')
     
 if __name__ == "__main__":
-    # classify_nb("train.data", "test.data")
+    # Main for testing purposes
     main()
+    pass

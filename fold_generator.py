@@ -58,8 +58,5 @@ def main():
                 f.write(line)
             if fold_ind != 9:
                 f.write('\n')
-    
-    
-
 
 main()
