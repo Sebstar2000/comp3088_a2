@@ -33,7 +33,7 @@ def get_file_data(filename, test):
 
 def gen_eucl_dist(x, A):
     new_matrix = (A - x)**2 ## Minus the cur_test from each row in train and square each value
-    vector_sums = new_matrix @ np.ones(8) # Get the Matrix multiplication calculating the vector of pre rooted sums
+    vector_sums = new_matrix @ np.ones(len(x)) # Get the Matrix multiplication calculating the vector of pre rooted sums
     final_dist = np.sqrt(vector_sums) # Square root each value in the vector
     return final_dist
 
